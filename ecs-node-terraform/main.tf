@@ -68,3 +68,12 @@ resource "aws_ecs_service" "node_service" {
     assign_public_ip = true
   }
 }
+
+git log 
+
+PS C:\Users\vaibh\ecs-node-app\ecs-node-terraform> git log --oneline
+976ee7b (HEAD -> main) Remove .terraform and add .gitignore
+af7d8c2 Remove .terraform directory from repo
+e448155 Merge branch 'main' of https://github.com/Vaibhav-code/Rearc-project
+2367654 Initial commit with ECS Fargate deployment setup
+62b307c Initial commit
