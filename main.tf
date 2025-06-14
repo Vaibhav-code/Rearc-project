@@ -36,19 +36,24 @@ resource "aws_ecs_task_definition" "node_task" {
   network_mode             = "awsvpc"
   cpu                      = "256"
   memory                   = "512"
-
-  execution_role_arn = aws_iam_role.ecs_task_execution.arn
+  execution_role_arn      = aws_iam_role.ecs_task_execution.arn
 
   container_definitions = jsonencode([
     {
       name      = "node-app",
-      image     = "476813399880.dkr.ecr.ap-south-1.amazonaws.com/node-ecs-app:latest",
+      image     = "476813399880.dkr.ecr.ap-south-1.amazonaws.com/test-node-app:latest",
       essential = true,
       portMappings = [
         {
           containerPort = 3000,
           hostPort      = 3000,
           protocol      = "tcp"
+        }
+      ],
+      environment = [
+        {
+          name  = "SECRET_WORD"
+          value = "rearcrocks"
         }
       ]
     }
