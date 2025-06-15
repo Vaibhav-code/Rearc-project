@@ -41,7 +41,7 @@ resource "aws_ecs_task_definition" "node_task" {
   container_definitions = jsonencode([
     {
       name      = "node-app",
-      image     = "476813399880.dkr.ecr.ap-south-1.amazonaws.com/test-node-app:latest",
+      image     = "476813399880.dkr.ecr.ap-south-1.amazonaws.com/ecs-node-app:latest",
       essential = true,
       portMappings = [
         {
