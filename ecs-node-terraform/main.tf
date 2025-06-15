@@ -36,19 +36,24 @@ resource "aws_ecs_task_definition" "node_task" {
   network_mode             = "awsvpc"
   cpu                      = "256"
   memory                   = "512"
-
-  execution_role_arn = aws_iam_role.ecs_task_execution.arn
+  execution_role_arn      = aws_iam_role.ecs_task_execution.arn
 
   container_definitions = jsonencode([
     {
       name      = "node-app",
-      image     = "476813399880.dkr.ecr.ap-south-1.amazonaws.com/node-ecs-app:latest",
+      image     = "476813399880.dkr.ecr.ap-south-1.amazonaws.com/ecs-node-app:latest",
       essential = true,
       portMappings = [
         {
           containerPort = 3000,
           hostPort      = 3000,
           protocol      = "tcp"
+        }
+      ],
+      environment = [
+        {
+          name  = "SECRET_WORD"
+          value = "rearcrocks"
         }
       ]
     }
@@ -63,17 +68,85 @@ resource "aws_ecs_service" "node_service" {
   desired_count   = 1
 
   network_configuration {
-    subnets          = ["subnet-032b787321e05c875"]
-    security_groups  = ["sg-0ebd8eda112c8dd0d"]
+    subnets         = ["subnet-032b787321e05c875", "subnet-03de246fb22173140"]
+    security_groups = ["sg-0ebd8eda112c8dd0d"]
     assign_public_ip = true
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.app_tg.arn
+    container_name   = "node-app"           # must match task definition
+    container_port   = 3000
+  }
+
+  depends_on = [aws_lb_listener.http]
+}
+
+
+# ALB Security Group
+resource "aws_security_group" "alb_sg" {
+  name   = "alb-sg"
+  vpc_id = "vpc-0858bf58d5b9a1d78" 
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
-git log 
+# ALB
+resource "aws_lb" "app" {
+  name               = "node-app-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = ["sg-0ebd8eda112c8dd0d"]
+  subnets = ["subnet-032b787321e05c875", "subnet-03de246fb22173140"]
+}
 
-PS C:\Users\vaibh\ecs-node-app\ecs-node-terraform> git log --oneline
-976ee7b (HEAD -> main) Remove .terraform and add .gitignore
-af7d8c2 Remove .terraform directory from repo
-e448155 Merge branch 'main' of https://github.com/Vaibhav-code/Rearc-project
-2367654 Initial commit with ECS Fargate deployment setup
-62b307c Initial commit
+# Target Group
+resource "aws_lb_target_group" "app_tg" {
+  name        = "node-app-tg"
+  port        = 3000
+  protocol    = "HTTP"
+  target_type = "ip"
+  vpc_id      = "vpc-0858bf58d5b9a1d78" 
+
+  health_check {
+    path                = "/"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    matcher             = "200"
+  }
+}
+
+# Listener
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.app.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app_tg.arn
+  }
+}
+
+
