@@ -3,3 +3,4 @@
 *.tfstate.backup
 crash.log
 *.log
+app/node_modules
